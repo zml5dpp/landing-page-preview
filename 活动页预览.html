@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动页预览</title>
+    <style>
+        /* 我的奖励固定图片 */
+        .my-reward-fixed {
+            position: absolute;
+            right: 0;
+            bottom: 135px;
+            width: 67px;
+            height: 67px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .my-reward-fixed img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 进度模块相关样式 */
+        .progress-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .progress-background {
+            position: relative;
+            width: 100%;
+        }
+
+        .progress-top, .progress-middle, .progress-bottom {
+            width: 100%;
+            display: block;
+        }
+
+        .progress-middle-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .progress-image {
+            position: absolute;
+            width: 335px;
+            height: 448px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 30px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .progress-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 心愿模块角色图片样式 */
+        .wish-role-image {
+            position: absolute;
+            width: 125px;
+            height: 150px;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .wish-role-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+     /* 心愿模块切换按钮样式 */
+.wish-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-left: 2px; /* 间距修改为2px */
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: #333; /* 与标题文案"心愿模块"颜色保持一致 */
+    position: relative;
+}
+
+.wish-toggle.hover-active {
+    background-color: #f0f0f0;
+}
+
+/* 完全移除原生的:hover气泡效果，只使用JS控制的hover-active类 */
+.wish-toggle.hover-active::after {
+    content: '点击预览心愿不同状态';
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+.wish-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+/* 移除小三角 */
+.wish-toggle:hover::before {
+    display: none;
+}
+
+
+        /* 拖拽相关样式 */
+        .drop-zone {
+            height: 4px;
+            background-color: #4a90e2;
+            margin: 2px 0;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+        
+        .drop-zone.active {
+            opacity: 1;
+            height: 8px;
+            background-color: #4a90e2;
+            margin: 8px 0;
+        }
+        
+        .added-module.dragging {
+            opacity: 0.5;
+            background-color: #e6f7ff;
+            border: 2px dashed #4a90e2;
+            transform: scale(0.98);
+        }
+
+        .added-module.drag-over-top {
+            border-top: 3px solid #4a90e2;
+            padding-top: 15px;
+            margin-top: 8px;
+        }
+
+        .added-module.drag-over-bottom {
+            border-bottom: 3px solid #4a90e2;
+            padding-bottom: 15px;
+            margin-bottom: 8px;
+        }
+
+        /* 模块之间的插入指示器 */
+        .insert-indicator {
+            height: 2px;
+            background-color: #4a90e2;
+            margin: 4px 0;
+            border-radius: 1px;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+        
+        .insert-indicator.active {
+            opacity: 1;
+            height: 2px;
+            background-color: #4a90e2;
+            margin: 8px 0;
+        }
+
+        /* 空状态占位区 */
+        .empty-modules-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            background-color: #f9f9f9;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        /* 视频播放图标 */
+        .video-play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .video-play-icon::before {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 16px solid white;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            margin-left: 4px;
+        }
+
+        /* Toast提示样式 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            max-width: 300px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* 其他基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+            max-height: 100vh;
+        }
+        
+        .preview-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .phone-preview-container {
+            width: 375px;
+            height: 812px;
+            position: relative;
+            transform: scale(0.7);
+            transform-origin: top center;
+        }
+        
+        .phone-preview {
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .preview-content {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 0;
+            scrollbar-width: none;
+        }
+        
+        .preview-content::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 88px;
+            background-color: #fff;
+            z-index: 10;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .nav-bar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .module {
+            width: 100%;
+            position: relative;
+        }
+        
+        .progress-module, .image-module, .video-module, .wish-module {
+            background-color: #fff;
+        }
+        
+        .progress-image, .image-item, .video-bg, .wish-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .video-module {
+            position: relative;
+        }
+        
+        .video-cover-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 335px;
+            height: 188px;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .video-cover {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .upload-area {
+            width: 350px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .upload-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .upload-area::-webkit-scrollbar-thumb {
+            background-color: #ddd;
+            border-radius: 3px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .section-desc {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+        
+        .add-module-section {
+            margin-bottom: 25px;
+        }
+        
+        .module-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .module-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background-color: transparent;
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .module-btn:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .module-btn.disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+        
+        .module-btn.disabled:hover {
+            background-color: transparent;
+        }
+        
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .drag-icon {
+            width: 14px;
+            height: 14px;
+            margin-right: 8px;
+            cursor: move;
+            color: #999;
+            display: flex;
+            align-items: center;
+        }
+        
+        .added-modules-section {
+            margin-top: 30px;
+        }
+        
+        .added-module {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s;
+            min-height: 60px;
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .module-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .module-name {
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        
+        .module-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            height: 40px;
+        }
+        
+        .upload-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background-color: transparent;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+            color: #666;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        
+        .upload-label:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .upload-label input {
+            display: none;
+        }
+        
+        .thumbnail-container {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            overflow: visible;
+            border: 1px solid #eee;
+            background-color: #fff;
+        }
+        
+        .thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .delete-thumbnail {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 18px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 2;
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .delete-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ffebee;
+            color: #ff4d4f;
+        }
+        
+        .placeholder {
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 16px;
+            border: 2px dashed #ddd;
+        }
+        
+        .progress-module .placeholder {
+            height: 150px;
+        }
+        
+        .image-module .placeholder {
+            height: 200px;
+        }
+        
+        .video-module .placeholder {
+            height: 300px;
+        }
+        
+        .wish-module .placeholder {
+            height: 150px;
+        }
+        
+        .video-cover-container .placeholder {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="preview-wrapper">
+            <div class="phone-preview-container">
+                <div class="phone-preview">
+                    <!-- 我的奖励固定图片 -->
+                    <div class="my-reward-fixed">
+                        <img src="https://s21.ax1x.com/2025/11/20/pZFmLEF.png" alt="我的奖励">
+                    </div>
+                    <div class="preview-content" id="preview-content">
+                        <div class="nav-bar">
+                            <img src="https://s21.ax1x.com/2025/11/19/pZi7goj.png" alt="导航栏">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-area" id="upload-area">
+            <div class="add-module-section">
+                <div class="section-title">添加活动页模块</div>
+                <div class="section-desc">可添加多个图片模块</div>
+                <div class="module-buttons">
+                    <button class="module-btn" data-type="video">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14m-7-7h14" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        视频模块
+                    </button>
+                    <button class="module-btn" data-type="image">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14m-7-7h14" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        图片模块
+                    </button>
+                    <button class="module-btn" data-type="progress">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14m-7-7h14" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        进度模块
+                    </button>
+                    <button class="module-btn" data-type="wish">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14m-7-7h14" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        心愿模块
+                    </button>
+                </div>
+            </div>
+            
+            <div class="added-modules-section">
+                <div class="section-title">已添加模块</div>
+                <div class="section-desc">可拖动模块上下移动排序</div>
+                <div id="added-modules-list">
+                    <!-- 空状态占位区将在没有模块时显示 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示容器 -->
+    <div id="toast" class="toast"></div>
+
+    <svg style="display: none;">
+        <symbol id="upload-icon" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </symbol>
+        
+        <symbol id="delete-icon" viewBox="0 0 24 24">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+        </symbol>
+        
+        <symbol id="drag-icon" viewBox="0 0 24 24">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </symbol>
+    </svg>
+
+    <script>
+        // 模块数据
+        const modules = [];
+
+        // Toast提示函数
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 图片尺寸验证函数
+        function validateImageSize(file, moduleType, imageType) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = function() {
+                    const width = this.naturalWidth;
+                    const height = this.naturalHeight;
+                    let isValid = true;
+                    let errorMessage = '';
+                    
+                    switch(moduleType) {
+                        case 'image':
+                            if (width !== 750) {
+                                isValid = false;
+                                errorMessage = '图片模块：宽度必须为750px';
+                            }
+                            break;
+                            
+                        case 'video':
+                            if (imageType === 'video-bg') {
+                                if (width !== 750) {
+                                    isValid = false;
+                                    errorMessage = '视频背景：宽度必须为750px';
+                                } else if (height < 376) {
+                                    isValid = false;
+                                    errorMessage = '视频背景：高度不能小于376px';
+                                }
+                            } else if (imageType === 'video-cover') {
+                                if (width !== 670 || height !== 376) {
+                                    isValid = false;
+                                    errorMessage = '视频封面：尺寸必须为670×376px';
+                                }
+                            }
+                            break;
+                            
+                        case 'progress':
+                            if (imageType === 'progress-top') {
+                                if (width !== 750 || height !== 100) {
+                                    isValid = false;
+                                    errorMessage = '进度模块上：尺寸必须为750×100px';
+                                }
+                            } else if (imageType === 'progress-middle') {
+                                if (width !== 750 || height !== 20) {
+                                    isValid = false;
+                                    errorMessage = '进度模块中：尺寸必须为750×20px';
+                                }
+                            } else if (imageType === 'progress-bottom') {
+                                if (width !== 750 || height !== 140) {
+                                    isValid = false;
+                                    errorMessage = '进度模块下：尺寸必须为750×140px';
+                                }
+                            }
+                            break;
+                            
+                        case 'wish':
+                            if (imageType === 'wish-unselected') {
+                                if (width !== 750) {
+                                    isValid = false;
+                                    errorMessage = '心愿模块未选择：宽度必须为750px';
+                                }
+                            } else if (imageType === 'wish-selected') {
+                                if (width !== 750) {
+                                    isValid = false;
+                                    errorMessage = '心愿模块已选择：宽度必须为750px';
+                                } else if (height < 360) {
+                                    isValid = false;
+                                    errorMessage = '心愿模块已选择：高度不能小于360px';
+                                }
+                            }
+                            break;
+                    }
+                    
+                    if (isValid) {
+                        resolve(true);
+                    } else {
+                        reject(errorMessage);
+                    }
+                };
+                img.onerror = () => reject('图片加载失败');
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // 初始化预览区域
+        function initPreview() {
+            const previewContent = document.getElementById('preview-content');
+            previewContent.innerHTML = '';
+            
+            const navBar = document.createElement('div');
+            navBar.className = 'nav-bar';
+            navBar.innerHTML = '<img src="https://s21.ax1x.com/2025/11/19/pZi7goj.png" alt="导航栏">';
+            previewContent.appendChild(navBar);
+            
+            modules.forEach(module => {
+                const moduleElement = createModuleElement(module);
+                previewContent.appendChild(moduleElement);
+            });
+        }
+
+        // 创建模块元素
+        function createModuleElement(module) {
+            const moduleDiv = document.createElement('div');
+            moduleDiv.className = `module ${module.type}-module`;
+            moduleDiv.dataset.type = module.type;
+            moduleDiv.dataset.id = module.id;
+            
+            if (module.type === 'video') {
+                const bgPlaceholder = document.createElement('div');
+                bgPlaceholder.className = 'placeholder';
+                bgPlaceholder.textContent = '视频模块';
+                
+                const bgImage = document.createElement('img');
+                bgImage.className = 'video-bg';
+                bgImage.style.display = 'none';
+                
+                const coverContainer = document.createElement('div');
+                coverContainer.className = 'video-cover-container';
+                
+                const coverPlaceholder = document.createElement('div');
+                coverPlaceholder.className = 'placeholder';
+                coverPlaceholder.textContent = '视频模块';
+                
+                const coverImage = document.createElement('img');
+                coverImage.className = 'video-cover';
+                coverImage.style.display = 'none';
+                
+                // 添加播放图标
+                const playIcon = document.createElement('div');
+                playIcon.className = 'video-play-icon';
+                playIcon.style.display = 'none';
+                
+                coverContainer.appendChild(coverPlaceholder);
+                coverContainer.appendChild(coverImage);
+                coverContainer.appendChild(playIcon);
+                
+                moduleDiv.appendChild(bgPlaceholder);
+                moduleDiv.appendChild(bgImage);
+                moduleDiv.appendChild(coverContainer);
+                
+                if (module.images.length > 0) {
+                    if (module.images[0]) {
+                        bgImage.src = module.images[0];
+                        bgImage.style.display = 'block';
+                        bgPlaceholder.style.display = 'none';
+                    }
+                    
+                    if (module.images[1]) {
+                        coverImage.src = module.images[1];
+                        coverImage.style.display = 'block';
+                        coverPlaceholder.style.display = 'none';
+                        playIcon.style.display = 'flex';
+                    }
+                }
+            } else if (module.type === 'progress') {
+                // 进度模块的特殊处理
+                const placeholder = document.createElement('div');
+                placeholder.className = 'placeholder';
+                placeholder.textContent = '进度模块';
+                
+                const progressContainer = document.createElement('div');
+                progressContainer.className = 'progress-container';
+                progressContainer.style.display = 'none';
+                
+                // 创建进度背景容器
+                const progressBackground = document.createElement('div');
+                progressBackground.className = 'progress-background';
+                
+                // 添加上部图片
+                const topImage = document.createElement('img');
+                topImage.className = 'progress-top';
+                topImage.style.display = 'none';
+                
+                // 创建中部图片容器
+                const middleContainer = document.createElement('div');
+                middleContainer.className = 'progress-middle-container';
+                
+                // 添加底部图片
+                const bottomImage = document.createElement('img');
+                bottomImage.className = 'progress-bottom';
+                bottomImage.style.display = 'none';
+                
+                // 添加进度图片
+                const progressImage = document.createElement('div');
+                progressImage.className = 'progress-image';
+                const progressImg = document.createElement('img');
+                progressImg.src = 'https://s21.ax1x.com/2025/11/20/pZFnRr6.png';
+                progressImg.alt = '进度图片';
+                progressImage.appendChild(progressImg);
+                
+                progressBackground.appendChild(topImage);
+                progressBackground.appendChild(middleContainer);
+                progressBackground.appendChild(bottomImage);
+                progressContainer.appendChild(progressBackground);
+                progressContainer.appendChild(progressImage);
+                
+                moduleDiv.appendChild(placeholder);
+                moduleDiv.appendChild(progressContainer);
+                
+                // 如果有上传的图片，更新进度模块显示
+                if (module.images.length >= 3 && module.images[0] && module.images[1] && module.images[2]) {
+                    updateProgressModule(module, topImage, middleContainer, bottomImage, progressImage);
+                    progressContainer.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+            } else if (module.type === 'wish') {
+                // 心愿模块的特殊处理
+                const placeholder = document.createElement('div');
+                placeholder.className = 'placeholder';
+                placeholder.textContent = module.displayName;
+                
+                const wishImage = document.createElement('img');
+                wishImage.className = 'wish-image';
+                wishImage.style.display = 'none';
+                wishImage.style.width = '100%';
+                wishImage.style.height = 'auto';
+                
+                // 角色图片容器
+                const roleImageContainer = document.createElement('div');
+                roleImageContainer.className = 'wish-role-image';
+                roleImageContainer.style.display = 'none';
+                
+                const roleImage = document.createElement('img');
+                roleImage.src = 'https://s21.ax1x.com/2025/11/20/pZF1xoV.png';
+                roleImage.alt = '角色';
+                roleImageContainer.appendChild(roleImage);
+                
+                moduleDiv.appendChild(placeholder);
+                moduleDiv.appendChild(wishImage);
+                moduleDiv.appendChild(roleImageContainer);
+                
+                // 根据当前状态显示图片
+                if (module.images.length > 0) {
+                    const currentState = module.currentState || 'unselected';
+                    const imageIndex = currentState === 'selected' ? 1 : 0;
+                    
+                    if (module.images[imageIndex]) {
+                        wishImage.src = module.images[imageIndex];
+                        wishImage.style.display = 'block';
+                        placeholder.style.display = 'none';
+                        
+                        // 如果是已选择状态，显示角色图片
+                        if (currentState === 'selected') {
+                            roleImageContainer.style.display = 'block';
+                            
+                            // 根据预览容器缩放比例调整角色图片尺寸
+                            const previewContainer = document.querySelector('.phone-preview');
+                            const containerWidth = previewContainer.clientWidth;
+                            const scaleRatio = containerWidth / 375;
+                            
+                            const roleWidth = 125 * scaleRatio;
+                            const roleHeight = 150 * scaleRatio;
+                            const leftSpacing = 30 * scaleRatio;
+                            
+                            roleImageContainer.style.width = roleWidth + 'px';
+                            roleImageContainer.style.height = roleHeight + 'px';
+                            roleImageContainer.style.left = leftSpacing + 'px';
+                        }
+                    }
+                }
+            } else {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'placeholder';
+                placeholder.textContent = module.displayName;
+                
+                const image = document.createElement('img');
+                image.className = `${module.type}-image`;
+                image.style.display = 'none';
+                image.style.width = '100%';
+                image.style.height = 'auto';
+                
+                moduleDiv.appendChild(placeholder);
+                moduleDiv.appendChild(image);
+                
+                if (module.images.length > 0 && module.images[0]) {
+                    image.src = module.images[0];
+                    image.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+            }
+            
+            return moduleDiv;
+        }
+
+        // 更新进度模块显示 - 修复计算逻辑（考虑缩放比例）
+        function updateProgressModule(module, topImage, middleContainer, bottomImage, progressImage) {
+            // 设置上、下图片
+            topImage.src = module.images[0];
+            topImage.style.display = 'block';
+            
+            bottomImage.src = module.images[2];
+            bottomImage.style.display = 'block';
+            
+            // 清空中部容器
+            middleContainer.innerHTML = '';
+            
+            // 获取预览容器的实际宽度（考虑缩放）
+            const previewContainer = document.querySelector('.phone-preview');
+            const containerWidth = previewContainer.clientWidth;
+            console.log('预览容器实际宽度:', containerWidth);
+            
+            // 计算缩放比例（相对于375px基准）
+            const scaleRatio = containerWidth / 375;
+            console.log('缩放比例:', scaleRatio);
+            
+            // 基于缩放比例计算实际参数
+            const progressHeight = 448 * scaleRatio; // 进度图片高度
+            const topSpacing = 30 * scaleRatio; // 顶部间距（距离上图片顶部的间距）
+            const minBottomSpacing = 30 * scaleRatio; // 最小底部间距（距离下图片底部的间距）
+            const progressWidth = 335 * scaleRatio; // 进度图片宽度
+            
+            console.log('缩放后参数 - 进度高度:', progressHeight, '顶部间距:', topSpacing, '底部间距:', minBottomSpacing);
+            
+            // 加载所有图片获取实际高度（在容器宽度下的显示高度）
+            const topImg = new Image();
+            const middleImg = new Image();
+            const bottomImg = new Image();
+            
+            let topDisplayHeight = 0;
+            let middleDisplayHeight = 0;
+            let bottomDisplayHeight = 0;
+            let loadedCount = 0;
+            
+            function checkAllLoaded() {
+                loadedCount++;
+                if (loadedCount === 3) {
+                    // 所有图片加载完成，开始计算
+                    calculateMiddleCount();
+                }
+            }
+            
+            topImg.onload = function() {
+                // 计算在容器宽度下的显示高度（等比缩放）
+                const aspectRatio = this.naturalWidth / this.naturalHeight;
+                topDisplayHeight = containerWidth / aspectRatio;
+                console.log('上图片显示高度:', topDisplayHeight);
+                checkAllLoaded();
+            };
+            topImg.src = module.images[0];
+            
+            middleImg.onload = function() {
+                // 计算在容器宽度下的显示高度（等比缩放）
+                const aspectRatio = this.naturalWidth / this.naturalHeight;
+                middleDisplayHeight = containerWidth / aspectRatio;
+                console.log('中图片显示高度:', middleDisplayHeight);
+                checkAllLoaded();
+            };
+            middleImg.src = module.images[1];
+            
+            bottomImg.onload = function() {
+                // 计算在容器宽度下的显示高度（等比缩放）
+                const aspectRatio = this.naturalWidth / this.naturalHeight;
+                bottomDisplayHeight = containerWidth / aspectRatio;
+                console.log('下图片显示高度:', bottomDisplayHeight);
+                checkAllLoaded();
+            };
+            bottomImg.src = module.images[2];
+            
+            function calculateMiddleCount() {
+                let middleCount;
+                
+                // 计算进度图片需要的最小总高度
+                // 总高度 = 上图片高度 + 进度图片高度 + 底部间距
+                // 注意：顶部间距30px是包含在上图片高度内的，所以不需要额外加上
+                const minTotalHeight = progressHeight + minBottomSpacing;
+                
+                // 计算当前上、下图片的总高度
+                const currentTopBottomHeight = topDisplayHeight + bottomDisplayHeight;
+                
+                console.log('进度图片需要的最小总高度:', minTotalHeight);
+                console.log('当前上+下图片显示高度:', currentTopBottomHeight);
+                
+                // 如果上+下图片的高度已经大于等于需要的最小高度，只需要1份中部图片
+                if (currentTopBottomHeight >= minTotalHeight) {
+                    console.log('上+下图片高度已足够，只需要1份中部图片');
+                    middleCount = 1;
+                    
+                    // 创建中部图片副本
+                    for (let i = 0; i < middleCount; i++) {
+                        const middleCopy = document.createElement('img');
+                        middleCopy.className = 'progress-middle';
+                        middleCopy.src = module.images[1];
+                        middleCopy.style.display = 'block';
+                        middleCopy.style.width = '100%';
+                        middleContainer.appendChild(middleCopy);
+                    }
+                    
+                } else {
+                    // 计算需要的中部图片高度
+                    const middleNeededHeight = minTotalHeight - currentTopBottomHeight;
+                    console.log('中部需要高度:', middleNeededHeight);
+                    
+                    // 计算需要的中部图片份数（向上取整）
+                    middleCount = Math.max(1, Math.ceil(middleNeededHeight / middleDisplayHeight));
+                    console.log('中部图片份数:', middleCount);
+                    
+                    // 创建中部图片副本
+                    for (let i = 0; i < middleCount; i++) {
+                        const middleCopy = document.createElement('img');
+                        middleCopy.className = 'progress-middle';
+                        middleCopy.src = module.images[1];
+                        middleCopy.style.display = 'block';
+                        middleCopy.style.width = '100%';
+                        middleContainer.appendChild(middleCopy);
+                    }
+                }
+                
+                // 设置进度图片位置和尺寸
+                // 进度图片顶部距离上图片顶部的间距为30px
+                progressImage.style.top = topSpacing + 'px';
+                progressImage.style.width = progressWidth + 'px';
+                progressImage.style.height = progressHeight + 'px';
+                progressImage.style.left = '50%';
+                progressImage.style.transform = 'translateX(-50%)';
+                
+                // 计算实际总高度和验证
+                const actualTotalHeight = topDisplayHeight + (middleDisplayHeight * middleCount) + bottomDisplayHeight;
+                const actualBottomSpacing = actualTotalHeight - (topSpacing + progressHeight);
+                
+                console.log('=== 最终计算结果 ===');
+                console.log('上图片显示高度:', topDisplayHeight);
+                console.log('中图片显示高度:', middleDisplayHeight);
+                console.log('下图片显示高度:', bottomDisplayHeight);
+                console.log('中部图片份数:', middleCount);
+                console.log('实际总高度:', actualTotalHeight);
+                console.log('进度图片顶部位置:', topSpacing + 'px');
+                console.log('进度图片底部位置:', (topSpacing + progressHeight) + 'px');
+                console.log('实际底部间距:', actualBottomSpacing);
+                console.log('满足底部间距要求:', actualBottomSpacing >= minBottomSpacing);
+                
+                if (actualBottomSpacing < minBottomSpacing) {
+                    console.warn('警告：底部间距不足，当前为:', actualBottomSpacing, '需要:', minBottomSpacing);
+                    // 如果还是不足，强制增加中部图片份数
+                    const additionalMiddleCount = Math.ceil((minBottomSpacing - actualBottomSpacing) / middleDisplayHeight);
+                    console.log('需要额外增加中部图片份数:', additionalMiddleCount);
+                    
+                    for (let i = 0; i < additionalMiddleCount; i++) {
+                        const middleCopy = document.createElement('img');
+                        middleCopy.className = 'progress-middle';
+                        middleCopy.src = module.images[1];
+                        middleCopy.style.display = 'block';
+                        middleCopy.style.width = '100%';
+                        middleContainer.appendChild(middleCopy);
+                    }
+                    
+                    // 更新总高度计算
+                    const finalTotalHeight = topDisplayHeight + (middleDisplayHeight * (middleCount + additionalMiddleCount)) + bottomDisplayHeight;
+                    const finalBottomSpacing = finalTotalHeight - (topSpacing + progressHeight);
+                    console.log('修正后总高度:', finalTotalHeight);
+                    console.log('修正后底部间距:', finalBottomSpacing);
+                }
+            }
+        }
+
+        // 添加模块
+        function addModule(type) {
+            if (type !== 'image') {
+                const existingModule = modules.find(m => m.type === type);
+                if (existingModule) {
+                    alert('该模块已添加！');
+                    return;
+                }
+            }
+            
+            const moduleId = Date.now().toString();
+            let displayName = '';
+            
+            if (type === 'image') {
+                displayName = '图片模块';
+            } else if (type === 'video') {
+                displayName = '视频模块';
+            } else if (type === 'progress') {
+                displayName = '进度模块';
+            } else if (type === 'wish') {
+                displayName = '心愿模块';
+            }
+            
+            const newModule = {
+                id: moduleId,
+                type: type,
+                displayName: displayName,
+                images: [],
+                currentState: 'unselected' // 心愿模块的当前状态
+            };
+            
+            modules.push(newModule);
+            updateAddedModulesList();
+            updateModuleButtons();
+            initPreview();
+        }
+
+        // 删除模块
+        function deleteModule(moduleId) {
+            const moduleIndex = modules.findIndex(m => m.id === moduleId);
+            if (moduleIndex !== -1) {
+                modules.splice(moduleIndex, 1);
+                updateAddedModulesList();
+                updateModuleButtons();
+                initPreview();
+            }
+        }
+
+        // 删除模块中的图片
+        function deleteModuleImage(moduleId, imageIndex) {
+            const moduleIndex = modules.findIndex(m => m.id === moduleId);
+            if (moduleIndex !== -1) {
+                modules[moduleIndex].images[imageIndex] = null;
+                updateAddedModulesList();
+                initPreview();
+            }
+        }
+
+      // 切换心愿模块状态
+function toggleWishState(moduleId) {
+    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+    if (moduleIndex !== -1 && modules[moduleIndex].type === 'wish') {
+        const module = modules[moduleIndex];
+        // 确保两张图片都已上传
+        if (module.images[0] && module.images[1]) {
+            module.currentState = module.currentState === 'unselected' ? 'selected' : 'unselected';
+            // 更新显示名称
+            module.displayName = module.currentState === 'selected' ? '心愿已选择' : '心愿未选择';
+            updateAddedModulesList();
+            initPreview();
+        }
+    }
+}
+
+        // 更新已添加模块列表
+        function updateAddedModulesList() {
+            const addedModulesList = document.getElementById('added-modules-list');
+            addedModulesList.innerHTML = '';
+            
+            // 如果没有模块，显示空状态占位区
+            if (modules.length === 0) {
+                const emptyPlaceholder = document.createElement('div');
+                emptyPlaceholder.className = 'empty-modules-placeholder';
+                emptyPlaceholder.textContent = '还未添加模块';
+                addedModulesList.appendChild(emptyPlaceholder);
+                return; // 直接返回，不执行后面的代码
+            }
+            
+            // 创建插入指示器
+            const createInsertIndicator = () => {
+                const indicator = document.createElement('div');
+                indicator.className = 'insert-indicator';
+                return indicator;
+            };
+            
+            modules.forEach((module, index) => {
+                // 在模块前添加插入指示器
+                if (index === 0) {
+                    const firstIndicator = createInsertIndicator();
+                    firstIndicator.dataset.position = 'before-' + module.id;
+                    addedModulesList.appendChild(firstIndicator);
+                }
+                
+                const moduleItem = document.createElement('div');
+                moduleItem.className = 'added-module';
+                moduleItem.dataset.id = module.id;
+                moduleItem.draggable = true;
+                
+                const moduleInfo = document.createElement('div');
+                moduleInfo.className = 'module-info';
+                
+                const dragIcon = document.createElement('div');
+                dragIcon.className = 'drag-icon';
+                dragIcon.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <use xlink:href="#drag-icon"></use>
+                    </svg>
+                `;
+                
+                const moduleName = document.createElement('div');
+                moduleName.className = 'module-name';
+                moduleName.textContent = module.displayName;
+              // 如果是心愿模块，添加切换按钮
+if (module.type === 'wish') {
+    // 检查是否已上传两张图片
+    const hasBothImages = module.images[0] && module.images[1];
+    
+    // 根据状态和图片上传情况确定标题文案
+    let titleText = '心愿模块';
+    if (hasBothImages) {
+        titleText = module.currentState === 'selected' ? '心愿已选择' : '心愿未选择';
+    }
+    
+    // 更新模块显示名称
+    module.displayName = titleText;
+    
+    moduleName.textContent = titleText; // 设置标题文案
+    
+    // 只有上传了两张图片才显示切换图标
+    if (hasBothImages) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'wish-toggle'; // 移除active类，保持样式不变
+        toggleBtn.innerHTML = `
+            <svg viewBox="0 0 1024 1024" fill="currentColor">
+                <path d="M734.56 576.032a29.344 29.344 0 0 1 17.44 4.736c7.68 4.928 12.832 12.896 14.944 21.728a38.56 38.56 0 0 1-3.2 26.88l-96 120.832c-8.864 17.024-28.448 22.848-43.744 13.024s-20.544-31.584-11.712-48.608l54.4-68.48H291.104a35.072 35.072 0 1 1 0-70.144h441.856l1.632 0.032zM289.44 448a29.344 29.344 0 0 1-17.44-4.736 35.264 35.264 0 0 1-14.944-21.728 38.56 38.56 0 0 1 3.2-26.88l96.032-120.832c8.832-17.024 28.416-22.848 43.712-13.024 15.296 9.824 20.544 31.584 11.712 48.608l-54.4 68.48h375.616a35.072 35.072 0 1 1 0 70.144H291.072l-1.6-0.032zM64 127.68C64 92.512 92.8 64 127.712 64H896.32C931.488 64 960 92.8 960 127.712V896.32c0 35.2-28.8 63.712-63.712 63.712H127.68C92.512 960 64 931.2 64 896.288V127.68z m64 32.32v703.936A32 32 0 0 0 160 896h704a32 32 0 0 0 32-32V160a32 32 0 0 0-32-32H160a32 32 0 0 0-32 32z"></path>
+            </svg>
+        `;
+                                             let allowTooltip = true;
+        
+        // 添加鼠标移入事件
+        toggleBtn.addEventListener('mouseenter', function() {
+            if (allowTooltip) {
+                this.classList.add('hover-active');
+            }
+        });
+        
+        // 添加鼠标移出事件
+        toggleBtn.addEventListener('mouseleave', function() {
+            this.classList.remove('hover-active');
+            // 鼠标移出后重置，允许下次显示气泡
+            allowTooltip = true;
+        });
+        
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // 点击时立即移除所有hover效果
+            this.classList.remove('hover-active');
+            // 禁止显示气泡
+            allowTooltip = false;
+            toggleWishState(module.id);
+        });
+        
+        moduleName.appendChild(toggleBtn);
+    }
+}
+                
+                moduleInfo.appendChild(dragIcon);
+                moduleInfo.appendChild(moduleName);
+                
+                const moduleActions = document.createElement('div');
+                moduleActions.className = 'module-actions';
+                
+                const hasImages = module.images.some(img => img !== null && img !== '');
+                
+                if (hasImages) {
+                    if (module.type === 'video') {
+                        if (module.images[0]) {
+                            const bgThumbnail = createThumbnail(module.id, 0, module.images[0]);
+                            moduleActions.appendChild(bgThumbnail);
+                        } else {
+                            const bgUploadLabel = createUploadLabel(module.id, 'video-bg', '背景');
+                            moduleActions.appendChild(bgUploadLabel);
+                        }
+                        
+                        if (module.images[1]) {
+                            const coverThumbnail = createThumbnail(module.id, 1, module.images[1]);
+                            moduleActions.appendChild(coverThumbnail);
+                        } else {
+                            const coverUploadLabel = createUploadLabel(module.id, 'video-cover', '封面');
+                            moduleActions.appendChild(coverUploadLabel);
+                        }
+                    } else if (module.type === 'progress') {
+                        // 进度模块的上传按钮
+                        if (module.images[0]) {
+                            const topThumbnail = createThumbnail(module.id, 0, module.images[0]);
+                            moduleActions.appendChild(topThumbnail);
+                        } else {
+                            const topUploadLabel = createUploadLabel(module.id, 'progress-top', '上');
+                            moduleActions.appendChild(topUploadLabel);
+                        }
+                        
+                        if (module.images[1]) {
+                            const middleThumbnail = createThumbnail(module.id, 1, module.images[1]);
+                            moduleActions.appendChild(middleThumbnail);
+                        } else {
+                            const middleUploadLabel = createUploadLabel(module.id, 'progress-middle', '中');
+                            moduleActions.appendChild(middleUploadLabel);
+                        }
+                        
+                        if (module.images[2]) {
+                            const bottomThumbnail = createThumbnail(module.id, 2, module.images[2]);
+                            moduleActions.appendChild(bottomThumbnail);
+                        } else {
+                            const bottomUploadLabel = createUploadLabel(module.id, 'progress-bottom', '下');
+                            moduleActions.appendChild(bottomUploadLabel);
+                        }
+                    } else if (module.type === 'wish') {
+                        // 心愿模块的上传按钮
+                        if (module.images[0]) {
+                            const unselectedThumbnail = createThumbnail(module.id, 0, module.images[0]);
+                            moduleActions.appendChild(unselectedThumbnail);
+                        } else {
+                            const unselectedUploadLabel = createUploadLabel(module.id, 'wish-unselected', '未选择');
+                            moduleActions.appendChild(unselectedUploadLabel);
+                        }
+                        
+                        if (module.images[1]) {
+                            const selectedThumbnail = createThumbnail(module.id, 1, module.images[1]);
+                            moduleActions.appendChild(selectedThumbnail);
+                        } else {
+                            const selectedUploadLabel = createUploadLabel(module.id, 'wish-selected', '已选择');
+                            moduleActions.appendChild(selectedUploadLabel);
+                        }
+                    } else {
+                        if (module.images[0]) {
+                            const thumbnail = createThumbnail(module.id, 0, module.images[0]);
+                            moduleActions.appendChild(thumbnail);
+                        } else {
+                            const uploadLabel = createUploadLabel(module.id, 'module', '');
+                            moduleActions.appendChild(uploadLabel);
+                        }
+                    }
+                } else {
+                    if (module.type === 'video') {
+                        const bgUploadLabel = createUploadLabel(module.id, 'video-bg', '背景');
+                        const coverUploadLabel = createUploadLabel(module.id, 'video-cover', '封面');
+                        moduleActions.appendChild(bgUploadLabel);
+                        moduleActions.appendChild(coverUploadLabel);
+                    } else if (module.type === 'progress') {
+                        // 进度模块的三个上传按钮
+                        const topUploadLabel = createUploadLabel(module.id, 'progress-top', '上');
+                        const middleUploadLabel = createUploadLabel(module.id, 'progress-middle', '中');
+                        const bottomUploadLabel = createUploadLabel(module.id, 'progress-bottom', '下');
+                        moduleActions.appendChild(topUploadLabel);
+                        moduleActions.appendChild(middleUploadLabel);
+                        moduleActions.appendChild(bottomUploadLabel);
+                    } else if (module.type === 'wish') {
+                        // 心愿模块的两个上传按钮
+                        const unselectedUploadLabel = createUploadLabel(module.id, 'wish-unselected', '未选择');
+                        const selectedUploadLabel = createUploadLabel(module.id, 'wish-selected', '已选择');
+                        moduleActions.appendChild(unselectedUploadLabel);
+                        moduleActions.appendChild(selectedUploadLabel);
+                    } else {
+                        const uploadLabel = createUploadLabel(module.id, 'module', '');
+                        moduleActions.appendChild(uploadLabel);
+                    }
+                }
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <use xlink:href="#delete-icon"></use>
+                    </svg>
+                `;
+                deleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteModule(module.id);
+                });
+                
+                moduleActions.appendChild(deleteBtn);
+                
+                moduleItem.appendChild(moduleInfo);
+                moduleItem.appendChild(moduleActions);
+                
+                addedModulesList.appendChild(moduleItem);
+                
+                // 在模块后添加插入指示器
+                const afterIndicator = createInsertIndicator();
+                afterIndicator.dataset.position = 'after-' + module.id;
+                addedModulesList.appendChild(afterIndicator);
+            });
+            
+            initUpload();
+            initDragAndDrop();
+        }
+
+        // 创建缩略图
+        function createThumbnail(moduleId, imageIndex, imageSrc) {
+            const container = document.createElement('div');
+            container.className = 'thumbnail-container';
+            
+            const thumbnail = document.createElement('img');
+            thumbnail.className = 'thumbnail';
+            thumbnail.src = imageSrc;
+            
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-thumbnail';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.style.display = 'flex';
+            deleteBtn.style.alignItems = 'center';
+            deleteBtn.style.justifyContent = 'center';
+            deleteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                deleteModuleImage(moduleId, imageIndex);
+            });
+            
+            container.appendChild(thumbnail);
+            container.appendChild(deleteBtn);
+            
+            return container;
+        }
+
+        // 创建上传标签
+        function createUploadLabel(moduleId, type, text) {
+            const uploadLabel = document.createElement('label');
+            uploadLabel.className = 'upload-label';
+            
+            if (type === 'module') {
+                uploadLabel.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <use xlink:href="#upload-icon"></use>
+                    </svg>
+                    <input type="file" class="module-upload" data-module-id="${moduleId}" data-module-type="${getModuleType(moduleId)}" accept="image/*">
+                `;
+            } else if (type === 'video-bg') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="video-bg-upload" data-module-id="${moduleId}" data-image-type="video-bg" accept="image/*">
+                `;
+            } else if (type === 'video-cover') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="video-cover-upload" data-module-id="${moduleId}" data-image-type="video-cover" accept="image/*">
+                `;
+            } else if (type === 'progress-top') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="progress-top-upload" data-module-id="${moduleId}" data-image-type="progress-top" accept="image/*">
+                `;
+            } else if (type === 'progress-middle') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="progress-middle-upload" data-module-id="${moduleId}" data-image-type="progress-middle" accept="image/*">
+                `;
+            } else if (type === 'progress-bottom') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="progress-bottom-upload" data-module-id="${moduleId}" data-image-type="progress-bottom" accept="image/*">
+                `;
+            } else if (type === 'wish-unselected') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="wish-unselected-upload" data-module-id="${moduleId}" data-image-type="wish-unselected" accept="image/*">
+                `;
+            } else if (type === 'wish-selected') {
+                uploadLabel.innerHTML = `
+                    ${text}
+                    <input type="file" class="wish-selected-upload" data-module-id="${moduleId}" data-image-type="wish-selected" accept="image/*">
+                `;
+            }
+            
+            return uploadLabel;
+        }
+
+        // 获取模块类型
+        function getModuleType(moduleId) {
+            const module = modules.find(m => m.id === moduleId);
+            return module ? module.type : '';
+        }
+
+        // 更新模块按钮状态
+        function updateModuleButtons() {
+            document.querySelectorAll('.module-btn').forEach(btn => {
+                const type = btn.dataset.type;
+                if (type !== 'image') {
+                    const existingModule = modules.find(m => m.type === type);
+                    if (existingModule) {
+                        btn.classList.add('disabled');
+                    } else {
+                        btn.classList.remove('disabled');
+                    }
+                }
+            });
+        }
+
+        // 初始化拖拽功能
+        function initDragAndDrop() {
+            const addedModulesList = document.getElementById('added-modules-list');
+            let draggedItem = null;
+            let activeIndicator = null;
+            let lastActiveIndicator = null;
+
+            addedModulesList.querySelectorAll('.added-module').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    
+                    setTimeout(() => {
+                        this.style.opacity = '0.4';
+                    }, 0);
+                });
+
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    this.style.opacity = '1';
+                    
+                    if (activeIndicator) {
+                        handleDrop(activeIndicator);
+                    }
+                    
+                    if (activeIndicator) {
+                        activeIndicator.classList.remove('active');
+                        activeIndicator = null;
+                    }
+                    lastActiveIndicator = null;
+                    draggedItem = null;
+                });
+            });
+
+            function handleDrop(indicator) {
+                if (!draggedItem || !indicator) return;
+                
+                const draggedId = draggedItem.dataset.id;
+                const position = indicator.dataset.position;
+                
+                const draggedIndex = modules.findIndex(m => m.id === draggedId);
+                if (draggedIndex === -1) return;
+                
+                const [positionType, targetId] = position.split('-');
+                let insertIndex;
+                
+                if (positionType === 'before') {
+                    const targetIndex = modules.findIndex(m => m.id === targetId);
+                    insertIndex = targetIndex;
+                } else {
+                    const targetIndex = modules.findIndex(m => m.id === targetId);
+                    insertIndex = targetIndex + 1;
+                }
+                
+                if (draggedIndex < insertIndex) {
+                    insertIndex--;
+                }
+                
+                const [movedModule] = modules.splice(draggedIndex, 1);
+                modules.splice(insertIndex, 0, movedModule);
+                
+                updateAddedModulesList();
+                initPreview();
+            }
+
+            addedModulesList.querySelectorAll('.insert-indicator').forEach(indicator => {
+                indicator.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (!draggedItem) return;
+                    
+                    addedModulesList.querySelectorAll('.insert-indicator').forEach(ind => {
+                        ind.classList.remove('active');
+                    });
+                    
+                    this.classList.add('active');
+                    activeIndicator = this;
+                    lastActiveIndicator = this;
+                });
+
+                indicator.addEventListener('dragleave', function(e) {
+                    const relatedTarget = e.relatedTarget;
+                    if (!this.contains(relatedTarget)) {
+                        if (activeIndicator === this) {
+                            this.classList.remove('active');
+                            activeIndicator = null;
+                        }
+                    }
+                });
+
+                indicator.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    handleDrop(this);
+                });
+            });
+
+            addedModulesList.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (!draggedItem) return;
+                
+                const rect = this.getBoundingClientRect();
+                const mouseY = e.clientY - rect.top;
+                
+                const indicators = this.querySelectorAll('.insert-indicator');
+                let closestIndicator = null;
+                let closestDistance = Infinity;
+                
+                indicators.forEach(indicator => {
+                    const indicatorRect = indicator.getBoundingClientRect();
+                    const indicatorY = indicatorRect.top - rect.top + indicatorRect.height / 2;
+                    const distance = Math.abs(mouseY - indicatorY);
+                    
+                    if (distance < 100 && distance < closestDistance) {
+                        closestDistance = distance;
+                        closestIndicator = indicator;
+                    }
+                });
+                
+                if (closestIndicator && activeIndicator !== closestIndicator) {
+                    if (activeIndicator) {
+                        activeIndicator.classList.remove('active');
+                    }
+                    closestIndicator.classList.add('active');
+                    activeIndicator = closestIndicator;
+                    lastActiveIndicator = closestIndicator;
+                }
+            });
+
+            addedModulesList.addEventListener('dragleave', function(e) {
+                const relatedTarget = e.relatedTarget;
+                if (!this.contains(relatedTarget)) {
+                    // 保持最后一个激活的指示器
+                }
+            });
+
+            document.addEventListener('dragover', function(e) {
+                if (draggedItem) {
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('drop', function(e) {
+                if (draggedItem && lastActiveIndicator) {
+                    e.preventDefault();
+                    handleDrop(lastActiveIndicator);
+                }
+            });
+        }
+
+        // 初始化上传功能
+        function initUpload() {
+            // 普通模块上传（图片模块、心愿模块）
+            document.querySelectorAll('.module-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    const moduleType = this.dataset.moduleType;
+                    
+                    if (file) {
+                        validateImageSize(file, moduleType, 'module')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[0] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            // 视频背景图上传
+            document.querySelectorAll('.video-bg-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'video', 'video-bg')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[0] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            // 视频封面图上传
+            document.querySelectorAll('.video-cover-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'video', 'video-cover')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[1] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            // 进度模块上传
+            document.querySelectorAll('.progress-top-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'progress', 'progress-top')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[0] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.progress-middle-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'progress', 'progress-middle')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[1] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.progress-bottom-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'progress', 'progress-bottom')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[2] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            // 心愿模块上传
+            document.querySelectorAll('.wish-unselected-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'wish', 'wish-unselected')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[0] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.wish-selected-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const moduleId = this.dataset.moduleId;
+                    
+                    if (file) {
+                        validateImageSize(file, 'wish', 'wish-selected')
+                            .then(() => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    const moduleIndex = modules.findIndex(m => m.id === moduleId);
+                                    if (moduleIndex !== -1) {
+                                        modules[moduleIndex].images[1] = event.target.result;
+                                        updateAddedModulesList();
+                                        initPreview();
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                            .catch(errorMessage => {
+                                showToast(errorMessage);
+                                this.value = ''; // 清空文件选择
+                            });
+                    }
+                });
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initPreview();
+            updateAddedModulesList(); // 确保初始状态显示占位符
+            
+            document.querySelectorAll('.module-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!this.classList.contains('disabled')) {
+                        addModule(this.dataset.type);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
